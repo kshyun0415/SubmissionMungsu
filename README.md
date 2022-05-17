@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
 <p>
    <a align="left" href="https://ultralytics.com/yolov5" target="_blank">
@@ -302,3 +303,6 @@ professional support requests please visit [https://ultralytics.com/contact](htt
         <img src="https://github.com/ultralytics/yolov5/releases/download/v1.0/logo-social-instagram.png" width="3%"/>
     </a>
 </div>
+=======
+# YoloV5-master
+>>>>>>> 0d202aa9b1d9fbaebf82bf81be06c87de401d41c
