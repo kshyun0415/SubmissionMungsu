@@ -1,0 +1,6 @@
+names:
+- dog
+- sleep
+nc: 2
+train: wandb-artifact://custom_yolov5\train
+val: wandb-artifact://custom_yolov5\val
