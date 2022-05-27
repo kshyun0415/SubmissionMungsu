@@ -1,6 +1,0 @@
-0 normal
-1 eat
-2 sleep
-3 poop
-4 itching
-5 vomit
