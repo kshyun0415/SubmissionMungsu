@@ -40,6 +40,10 @@ from PIL import Image, ImageOps
 import numpy as np
 from io import BytesIO
 
+# used when connect with DB
+import mydb
+from datetime import datetime
+
 model2 = load_model('keras_model.h5')
 
 results= [0,0,0,0,0,0]
@@ -125,6 +129,17 @@ def run(weights=ROOT / 'best.pt',  # model.pt path(s)
         bs = 1  # batch_size
     vid_path, vid_writer = [None] * bs, [None] * bs
 
+    # define variables used to run TM
+    # values can be changed whenever
+    imagetrsd = 0.5
+    durationtrsd = 3
+    dog_name = "cheolsu"
+    beforeaction = -1
+    duration = -1
+    currentTime = datetime.now()
+    starts = [currentTime,currentTime,currentTime,currentTime,currentTime,currentTime]
+    ends = [currentTime,currentTime,currentTime,currentTime,currentTime,currentTime]
+
     # Run inference
     model.warmup(imgsz=(1 if pt else bs, 3, *imgsz), half=half)  # warmup
     dt, seen = [0.0, 0.0, 0.0], 0
@@ -208,7 +223,49 @@ def run(weights=ROOT / 'best.pt',  # model.pt path(s)
                             data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
                             data[0] = normalized_image_array
                             prediction = model2.predict(data)
+                            print(prediction)
                             Predictions= [prediction[0,0], prediction[0,1], prediction[0,2], prediction[0,3], prediction[0,4], prediction[0,5]]
+                            
+                            # DB연동 위해 추가 된 코드
+                            if(max(Predictions) > imagetrsd):
+                                currentaction = Predictions.index(max(Predictions))
+                                currentTime = datetime.now()
+
+                                # 구토는 지속시간 상관 없이 발견 즉시 기록
+                                if(currentaction == 5):
+                                    if(beforeaction != currentaction):
+                                        mydb.insertRecord(dog_name, currentTime, currentaction, 0)
+                                        starts[currentaction] = ends[beforeaction] = currentTime
+                                    else:
+                                        mydb.modifyRecord(starts[currentaction], (currentTime-starts[currentaction]).seconds)
+                                    beforeaction = currentaction
+                                    continue
+
+                                if(beforeaction != currentaction):
+                                    #행동이 바뀜 현재까지를 저장하고 기록 새로 시작
+                                    duration = (currentTime-starts[beforeaction]).seconds
+                                    ends[beforeaction] = currentTime
+                                    if(beforeaction != -1 and duration >= durationtrsd):
+                                        if(mydb.alreadyRecord(starts[beforeaction]) == 0):                    
+                                            mydb.insertRecord(dog_name, starts[beforeaction], beforeaction, duration)
+                                        else:
+                                            mydb.modifyRecord(starts[beforeaction], duration)
+
+                                    if((duration >= durationtrsd or beforeaction == 5) and (currentTime-ends[currentaction]).seconds >= durationtrsd):
+                                        starts[currentaction] = currentTime
+                                        
+                                
+                                else: #이전행동 유지, 지속시간 보고 체크해주기
+                                    duration = (currentTime-starts[currentaction]).seconds
+                                    if(duration >= durationtrsd):
+                                        if(mydb.alreadyRecord(starts[currentaction]) == 0):                    
+                                            mydb.insertRecord(dog_name, starts[currentaction], currentaction, duration)
+                                        else:
+                                            mydb.modifyRecord(starts[currentaction], duration)
+
+                                beforeaction = currentaction
+
+                            '''
                             indexOfClass=Predictions.index(max(Predictions))
                             if indexOfClass == 0:
                                 results[0]=results[0]+1
@@ -224,6 +281,7 @@ def run(weights=ROOT / 'best.pt',  # model.pt path(s)
                             elif indexOfClass==5:
                                 results[5]=results[5]+1
                         print(results)
+                        '''
             
             # Stream results
             im0 = annotator.result()
